@@ -3,9 +3,9 @@ import swaggerJsdoc from "swagger-jsdoc";
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "Wolf Studios",
+    title: "Esmu Studios",
     version: "1.0.0",
-    description: "API documentation for Wolf Studios",
+    description: "API documentation for Esmu Studios",
   },
   servers: [
     {
@@ -13,7 +13,7 @@ const swaggerDefinition = {
       description: "Local Server",
     },
     {
-      url: "https://wolf-studios-backend-phi.vercel.app/api/v1",
+      url: "https://my-studio-backend.vercel.app/api/v1",
       description: "Deployed Server",
     },
   ],
