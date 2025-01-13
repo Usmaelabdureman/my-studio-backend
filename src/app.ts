@@ -15,8 +15,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: [
-      // "https://wolf-studios-frontend.vercel.app",
-      // "https://wolf-studios-backend-theta.vercel.app",
+      "https://my-studio-frontend.vercel.app",
+      "https://my-studio-backend.vercel.app",
       "http://localhost:3000",
     ],
     credentials: true,
