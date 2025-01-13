@@ -11,6 +11,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+
 }
 
 model User {
@@ -29,8 +31,58 @@ model User {
   updated_at          DateTime   @updatedAt
   Campaign            Campaign[]
   File                File[]
+  ThreadParticipant   ThreadParticipant[]
+  Message             Message[]
+
 
   @@map("users")
+}
+model Thread {
+  id          String              @id @default(uuid())
+  type        ThreadType          @default(DIRECT)
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+  participants ThreadParticipant[]
+  messages    Message[]
+
+  @@map("threads")
+}
+
+model ThreadParticipant {
+  id        String @id @default(uuid())
+  thread_id String
+  user_id   String
+
+  thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([thread_id, user_id])
+  @@map("thread_participants")
+}
+
+model Message {
+  id          String      @id @default(uuid())
+  thread_id   String
+  author_id   String
+  type        MessageType @default(TEXT)
+  content     String
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [author_id], references: [id])
+
+  @@map("messages")
+}
+
+enum ThreadType {
+  DIRECT
+  GROUP
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
 }
 
 model Records {
