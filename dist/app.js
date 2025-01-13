@@ -17,8 +17,8 @@ app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cors_1.default)({
     origin: [
-        "https://wolf-studios-frontend.vercel.app",
-        "https://wolf-studios-backend-theta.vercel.app",
+        "https://my-studio-frontend.vercel.app",
+        "https://my-studio-backend.vercel.app",
         "http://localhost:3000",
     ],
     credentials: true,
@@ -27,7 +27,7 @@ app.use((0, cors_1.default)({
 app.get("/", (req, res) => {
     res.status(http_status_1.default.OK).json({
         success: true,
-        message: "Wolfstudios server is working fine",
+        message: "Esmu server is working fine",
     });
 });
 // api routes
