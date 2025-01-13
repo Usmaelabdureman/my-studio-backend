@@ -25,9 +25,9 @@ const sendEmail = (receiverEmail, html) => __awaiter(void 0, void 0, void 0, fun
         },
     });
     const info = yield transporter.sendMail({
-        from: `"Wolfstudios" <${config_1.default.wolfstudios_email}>`,
+        from: `"Usmael A" <${config_1.default.wolfstudios_email}>`,
         to: receiverEmail,
-        subject: "WOLFSTUDIOS - Password Reset OTP",
+        subject: "Usmael Studio - Password Reset OTP",
         html,
     });
     return info;

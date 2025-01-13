@@ -27,7 +27,7 @@ app.use((0, cors_1.default)({
 app.get("/", (req, res) => {
     res.status(http_status_1.default.OK).json({
         success: true,
-        message: "Esmu server is working fine",
+        message: "Esmu  server is working fine",
     });
 });
 // api routes
