@@ -27,7 +27,7 @@ app.use(
 app.get("/", (req, res) => {
   res.status(httpStatus.OK).json({
     success: true,
-    message: "Wolfstudios server is working fine",
+    message: "Esmu  server is working fine",
   });
 });
 
