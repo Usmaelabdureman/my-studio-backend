@@ -22,7 +22,7 @@ function main() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             server = app_1.default.listen(port, () => {
-                console.log(`Wolfstudios server is running on port ${port}`);
+                console.log(`Esmu server is running on port ${port}`);
             });
             // cron schedule to clear OTP
             node_cron_1.default.schedule("0 12 * * *", () => {

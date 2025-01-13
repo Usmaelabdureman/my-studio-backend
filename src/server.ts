@@ -11,7 +11,7 @@ let server: Server;
 async function main() {
   try {
     server = app.listen(port, () => {
-      console.log(`Wolfstudios server is running on port ${port}`);
+      console.log(`Esmu server is running on port ${port}`);
     });
 
     // cron schedule to clear OTP
