@@ -12,9 +12,9 @@ const sendEmail = async (receiverEmail: string, html: string) => {
   });
 
   const info = await transporter.sendMail({
-    from: `"Wolfstudios" <${config.wolfstudios_email}>`,
+    from: `"Usmael A" <${config.wolfstudios_email}>`,
     to: receiverEmail,
-    subject: "WOLFSTUDIOS - Password Reset OTP",
+    subject: "Usmael Studio - Password Reset OTP",
     html,
   });
 
