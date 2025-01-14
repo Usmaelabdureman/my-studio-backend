@@ -12,6 +12,7 @@ async function main() {
   try {
     server = app.listen(port, () => {
       console.log(`Esmu server is running on port ${port}`);
+      console.log(`Swagger documentation available at http://localhost:${port}/api-docs`);
     });
 
     // cron schedule to clear OTP

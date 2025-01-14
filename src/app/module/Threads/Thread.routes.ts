@@ -5,8 +5,8 @@ import { createThreadValidation, addMessageValidation } from './Thread.validatio
 
 const router = Router();
 
-router.post('/create', validateRequest(createThreadValidation), ThreadController.createThread);
-router.post('/message', validateRequest(addMessageValidation), ThreadController.addMessage);
+router.post('/create', ThreadController.createThread);
+router.post('/message', ThreadController.addMessage);
 router.get('/:threadId/messages', ThreadController.getMessages);
 
-export default router;
+export const ThreadRoutes = router;
