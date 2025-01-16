@@ -19,6 +19,13 @@
  *           type: string
  *           enum: ["DIRECT", "GROUP"]
  *           example: "DIRECT"
+ *         name:
+ *           type: string
+ *           nullable: true
+ *           example: "Project Team"
+ *         member_count:
+ *           type: integer
+ *           example: 5
  *         participants:
  *           type: array
  *           items:
@@ -56,7 +63,7 @@
  * @swagger
  * /threads/create:
  *   post:
- *     summary: Create a new thread with an initial message
+ *     summary: Create a new thread with an optional name and an initial message
  *     tags: [Thread]
  *     requestBody:
  *       required: true
@@ -68,12 +75,16 @@
  *               type:
  *                 type: string
  *                 enum: ["DIRECT", "GROUP"]
- *                 example: "DIRECT"
+ *                 example: "GROUP"
+ *               name:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "Project Team"
  *               participants:
  *                 type: array
  *                 items:
  *                   type: string
- *                 example: ["user1", "user2"]
+ *                 example: ["user1", "user2", "user3"]
  *               initialMessage:
  *                 type: object
  *                 properties:
@@ -82,14 +93,14 @@
  *                     example: "user1"
  *                   content:
  *                     type: string
- *                     example: "Hello, world!"
+ *                     example: "Hello, everyone!"
  *                   type:
  *                     type: string
  *                     enum: ["TEXT", "IMAGE"]
  *                     example: "TEXT"
  *     responses:
  *       200:
- *         description: Thread created successfully with an initial message
+ *         description: Thread created successfully with optional name and an initial message
  *         content:
  *           application/json:
  *             schema:
@@ -97,7 +108,30 @@
  */
 
 /**
- * 
+ * @swagger
+ * /threads:
+ *   get:
+ *     summary: Get all threads for a user
+ *     tags: [Thread]
+ *     parameters:
+ *       - name: userId
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "user1"
+ *     responses:
+ *       200:
+ *         description: List of threads
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Thread'
+ */
+
+/**
  * @swagger
  * /threads/message:
  *   post:
@@ -105,7 +139,7 @@
  *     tags: [Thread]
  *     parameters:
  *       - name: threadId
- *         in: path
+ *         in: query
  *         required: true
  *         schema:
  *           type: string
@@ -122,7 +156,7 @@
  *                 example: "user1"
  *               content:
  *                 type: string
- *                 example: "Hello, world!"
+ *                 example: "Let's get started!"
  *               type:
  *                 type: string
  *                 enum: ["TEXT", "IMAGE"]
@@ -159,4 +193,3 @@
  *               items:
  *                 $ref: '#/components/schemas/Message'
  */
-

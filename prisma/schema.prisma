@@ -34,16 +34,18 @@ model User {
   ThreadParticipant   ThreadParticipant[]
   Message             Message[]
 
-
   @@map("users")
 }
+
 model Thread {
-  id          String              @id @default(uuid())
-  type        ThreadType          @default(DIRECT)
-  created_at  DateTime            @default(now())
-  updated_at  DateTime            @updatedAt
+  id           String              @id @default(uuid())
+  type         ThreadType          @default(DIRECT)
+  name         String?             // Optional name for the thread
+  member_count Int                 @default(0) // Member count for the thread
+  created_at   DateTime            @default(now())
+  updated_at   DateTime            @updatedAt
   participants ThreadParticipant[]
-  messages    Message[]
+  messages     Message[]
 
   @@map("threads")
 }
@@ -54,7 +56,7 @@ model ThreadParticipant {
   user_id   String
 
   thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [user_id], references: [email], onDelete: Cascade)
 
   @@unique([thread_id, user_id])
   @@map("thread_participants")
@@ -70,7 +72,7 @@ model Message {
   updated_at  DateTime    @updatedAt
 
   thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
-  author User   @relation(fields: [author_id], references: [id])
+  author User   @relation(fields: [author_id], references: [email])
 
   @@map("messages")
 }
@@ -84,6 +86,7 @@ enum MessageType {
   TEXT
   IMAGE
 }
+
 
 model Records {
   id                             String        @id @default(uuid())
