@@ -13,7 +13,9 @@ const validateFormData_1 = __importDefault(require("../../middlewares/validateFo
 const User_validations_1 = require("./User.validations");
 const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
 const router = (0, express_1.Router)();
-router.get("/", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), User_controllers_1.UserControllers.getUsers);
+router.get("/", 
+// auth(UserRole.SUPER_ADMIN, UserRole.ADMIN),
+User_controllers_1.UserControllers.getUsers);
 router.get("/profile", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.USER), User_controllers_1.UserControllers.getMe);
 router.patch("/update-profile", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN, client_1.UserRole.USER), fileUploader_1.fileUploader.singleUpload.single("profile_pic"), (0, validateFormData_1.default)(User_validations_1.UserValidations.updateProfileValidationSchema), User_controllers_1.UserControllers.updateProfile);
 router.patch("/update-user/:id", (0, auth_1.default)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.ADMIN), (0, validateRequest_1.default)(User_validations_1.UserValidations.updateUserValidationSchema), User_controllers_1.UserControllers.updateUser);

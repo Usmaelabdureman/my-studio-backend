@@ -22,18 +22,18 @@ const swaggerDefinition = {
         },
     ],
     components: {
-        securitySchemes: {
-            AdminAuth: {
-                type: "apiKey",
-                in: "header",
-                name: "Authorization",
-            },
-            UserAuth: {
-                type: "apiKey",
-                in: "header",
-                name: "Authorization",
-            },
-        },
+    // securitySchemes: {
+    //   AdminAuth: {
+    //     type: "apiKey",
+    //     in: "header",
+    //     name: "Authorization",
+    //   },
+    //   UserAuth: {
+    //     type: "apiKey",
+    //     in: "header",
+    //     name: "Authorization",
+    //   },
+    // },
     },
 };
 const options = {
