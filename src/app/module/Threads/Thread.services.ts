@@ -84,13 +84,13 @@ export const addMessage = async (
   });
 
   // Sync message to Supabase
-  await supabase.from('messages').insert({
-    thread_id: threadId,
-    author_id: authorId,
-    content,
-    type,
-    created_at: new Date().toISOString(),
-  });
+  // await supabase.from('messages').insert({
+  //   thread_id: threadId,
+  //   author_id: authorId,
+  //   content,
+  //   type,
+  //   created_at: new Date().toISOString(),
+  // });
 
   return message;
 };
@@ -102,18 +102,18 @@ export const getThreadMessages = async (threadId: string, onNewMessage?: (messag
     orderBy: { created_at: 'asc' },
   });
 
-  if (onNewMessage) {
-    supabase
-      .channel(`thread:${threadId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
-        (payload) => {
-          onNewMessage(payload.new);
-        }
-      )
-      .subscribe();
-  }
+  // if (onNewMessage) {
+  //   supabase
+  //     .channel(`thread:${threadId}`)
+  //     .on(
+  //       'postgres_changes',
+  //       { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
+  //       (payload) => {
+  //         onNewMessage(payload.new);
+  //       }
+  //     )
+  //     .subscribe();
+  // }
 
   return messages;
 };
@@ -137,18 +137,18 @@ export const getUserThreads = async (userId: string, onNewThread?: (thread: any)
   });
 
   // If a real-time listener is needed
-  if (onNewThread) {
-    supabase
-      .channel(`user:${userId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'threads', filter: `participants=like.%${userId}%` },
-        (payload) => {
-          onNewThread(payload.new);
-        }
-      )
-      .subscribe();
-  }
+  // if (onNewThread) {
+  //   supabase
+  //     .channel(`user:${userId}`)
+  //     .on(
+  //       'postgres_changes',
+  //       { event: 'INSERT', schema: 'public', table: 'threads' },
+  //       (payload) => {
+  //         onNewThread(payload.new);
+  //       }
+  //     )
+  //     .subscribe();
+  // }
 
   return threads;
 };

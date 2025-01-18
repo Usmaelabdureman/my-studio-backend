@@ -34,9 +34,9 @@ model User {
   ThreadParticipant   ThreadParticipant[]
   Message             Message[]
 
+
   @@map("users")
 }
-
 model Thread {
   id           String              @id @default(uuid())
   type         ThreadType          @default(DIRECT)

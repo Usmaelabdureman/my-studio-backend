@@ -11,6 +11,7 @@ export const createThread = catchAsync(async (req: Request, res: Response) => {
 // get threads
 export const getThreads = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.query;
+  console.log("user Id",userId)
   const threads = await ThreadService.getUserThreads(userId as string);
   res.status(200).json({ success: true, data: threads });
 });

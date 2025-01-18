@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+
+
 export const createThreadValidation = z.object({
   type: z.enum(['DIRECT', 'GROUP']),
   participants: z.array(z.string().uuid()).min(2, 'A thread must have at least two participants'),
