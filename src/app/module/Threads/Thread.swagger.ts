@@ -137,30 +137,28 @@
  *   post:
  *     summary: Add a message to a thread
  *     tags: [Thread]
- *     parameters:
- *       - name: threadId
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *           example: "thread123"
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
+ *               threadId:
+ *                 type: string
  *               authorId:
  *                 type: string
  *                 example: "user1"
  *               content:
  *                 type: string
- *                 example: "Let's get started!"
+ *                 example: "Here is a file to check out!"
  *               type:
  *                 type: string
- *                 enum: ["TEXT", "IMAGE"]
- *                 example: "TEXT"
+ *                 enum: ["TEXT", "FILE"]
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: The file to upload (only for FILE type)
  *     responses:
  *       200:
  *         description: Message added successfully
@@ -168,7 +166,13 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Bad request, invalid input
+ *       500:
+ *         description: Server error
  */
+
+
 
 /**
  * @swagger

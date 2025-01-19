@@ -67,7 +67,8 @@ model Message {
   thread_id   String
   author_id   String
   type        MessageType @default(TEXT)
-  content     String
+  content     String?
+  file_url    String?
   created_at  DateTime    @default(now())
   updated_at  DateTime    @updatedAt
 
@@ -84,7 +85,7 @@ enum ThreadType {
 
 enum MessageType {
   TEXT
-  IMAGE
+  FILE
 }
 
 

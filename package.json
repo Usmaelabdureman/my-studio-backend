@@ -15,15 +15,16 @@
     "sharp": "^0.33.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "uuid": "^11.0.5",
     "zod": "^3.23.8"
   },
-"scripts": {
-  "clean": "rm -rf dist",
-  "build": "npm run clean && tsc",
-  "start": "node ./dist/server.js",
-  "dev": "ts-node-dev --respawn --transpile-only --watch ./src/app/ ./src/server.ts",
-  "postinstall": "prisma generate"
-},
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc",
+    "start": "node ./dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only --watch ./src/app/ ./src/server.ts",
+    "postinstall": "prisma generate"
+  },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",

@@ -1,11 +1,13 @@
+import path from 'path';
 import prisma from '../../shared/prisma';
 import  supabase  from '../../shared/supabase';
+import {v4 as uuidv4} from 'uuid';
 
 export const createThread = async (
   type: 'DIRECT' | 'GROUP',
   participants: string[],
   name?: string,
-  initialMessage?: { authorId: string; content: string; type: 'TEXT' | 'IMAGE' }
+  initialMessage?: { authorId: string; content: string; type: 'TEXT' | 'FILE', }
 ) => {
   // Ensure name is set for GROUP threads
   if (type === 'GROUP' && !name) {
@@ -21,7 +23,7 @@ export const createThread = async (
     if (!content || typeof content !== 'string') {
       throw new Error('Invalid initialMessage: "content" is required and must be a string');
     }
-    if (!messageType || (messageType !== 'TEXT' && messageType !== 'IMAGE')) {
+    if (!messageType || (messageType !== 'TEXT' && messageType !== 'FILE')) {
       throw new Error('Invalid initialMessage: "type" must be "TEXT" or "IMAGE"');
     }
   }
@@ -68,32 +70,73 @@ export const updateThreadName = async (threadId: string, name: string) => {
 };
 
 
-export const addMessage = async (
-  threadId: string,
-  authorId: string,
-  content: string,
-  type: 'TEXT' | 'IMAGE'
-) => {
-  const message = await prisma.message.create({
-    data: {
-      thread_id: threadId,
-      author_id: authorId,
-      content,
-      type,
-    },
+// export const addMessage = async (
+//   threadId: string,
+//   authorId: string,
+//   content: string,
+//   type: 'TEXT' | 'IMAGE'
+// ) => {
+//   const message = await prisma.message.create({
+//     data: {
+//       thread_id: threadId,
+//       author_id: authorId,
+//       content,
+//       type,
+//     },
+//   });
+
+
+//   return message;
+// };
+
+
+
+
+
+export const addMessage = async (threadId: string, authorId: string, content: string, type: 'TEXT' | 'FILE', file: Express.Multer.File | null) => {
+  let fileUrl = null;
+
+  // If the type is "FILE", we handle file upload to Supabase
+  if (type === 'FILE' && file) {
+    // Generate a unique filename using current timestamp and file extension
+    const fileExt = path.extname(file.originalname);
+    const fileName = `${uuidv4()}${fileExt}`;
+
+    // Upload file to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('general') 
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (error) {
+      throw new Error('Error uploading file to Supabase');
+    }
+
+    // Get the public URL for the uploaded file
+    fileUrl = supabase.storage.from('general').getPublicUrl(fileName).data?.publicUrl;
+  }
+
+  
+  // Create the message data (whether it is text or file)
+  const messageData = {
+    thread_id: threadId,
+    author_id: authorId,
+    content: content || '', // Content can be empty if only a file is uploaded
+    file_url: fileUrl || '', // Store file URL if file exists
+    type, // Type can be 'TEXT' or 'FILE'
+  };
+
+  // Save the message to the database using Prisma
+  // console.log("messageData",messageData)
+  const newMessage = await prisma.message.create({
+    data: messageData,
   });
 
-  // Sync message to Supabase
-  // await supabase.from('messages').insert({
-  //   thread_id: threadId,
-  //   author_id: authorId,
-  //   content,
-  //   type,
-  //   created_at: new Date().toISOString(),
-  // });
-
-  return message;
+  return newMessage;
 };
+
 
 
 export const getThreadMessages = async (threadId: string, onNewMessage?: (message: any) => void) => {
@@ -102,18 +145,6 @@ export const getThreadMessages = async (threadId: string, onNewMessage?: (messag
     orderBy: { created_at: 'asc' },
   });
 
-  // if (onNewMessage) {
-  //   supabase
-  //     .channel(`thread:${threadId}`)
-  //     .on(
-  //       'postgres_changes',
-  //       { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
-  //       (payload) => {
-  //         onNewMessage(payload.new);
-  //       }
-  //     )
-  //     .subscribe();
-  // }
 
   return messages;
 };
@@ -136,19 +167,7 @@ export const getUserThreads = async (userId: string, onNewThread?: (thread: any)
     },
   });
 
-  // If a real-time listener is needed
-  // if (onNewThread) {
-  //   supabase
-  //     .channel(`user:${userId}`)
-  //     .on(
-  //       'postgres_changes',
-  //       { event: 'INSERT', schema: 'public', table: 'threads' },
-  //       (payload) => {
-  //         onNewThread(payload.new);
-  //       }
-  //     )
-  //     .subscribe();
-  // }
+
 
   return threads;
 };

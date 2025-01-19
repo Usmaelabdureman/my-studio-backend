@@ -11,14 +11,18 @@ export const createThread = catchAsync(async (req: Request, res: Response) => {
 // get threads
 export const getThreads = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.query;
-  console.log("user Id",userId)
+  // console.log("user Id",userId)
   const threads = await ThreadService.getUserThreads(userId as string);
   res.status(200).json({ success: true, data: threads });
 });
 
 export const addMessage = catchAsync(async (req: Request, res: Response) => {
   const { threadId, authorId, content, type } = req.body;
-  const message = await ThreadService.addMessage(threadId, authorId, content, type);
+  const file = req?.file;
+
+  // console.log("data in control", req.body, req.file);
+
+  const message = await ThreadService.addMessage(threadId, authorId, content, type, file ?? null);
   res.status(201).json({ success: true, data: message });
 });
 
