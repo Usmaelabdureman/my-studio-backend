@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as ThreadController from './Thread.controllers';
 import validateRequest from "../../middlewares/validateRequest";
 import { createThreadValidation, addMessageValidation } from './Thread.validations';
-import { fileUploader } from '../../utils/fileUploader';
+
 import multer from 'multer';
 
 const router = Router();
@@ -11,5 +11,11 @@ router.post('/create', ThreadController.createThread);
 router.get('/', ThreadController.getThreads);
 router.post('/message', upload.single('file'), ThreadController.addMessage);
 router.get('/:threadId/messages', ThreadController.getMessages);
+router.put('/message/edit', ThreadController.editMessage);
+router.delete('/message/delete', ThreadController.deleteMessage);
+router.post('/message/reply', ThreadController.replyToMessage);
+// router.get('/thread/:threadId/unread-count', ThreadController.getUnreadCount);
+router.post('/thread/mark-as-read', ThreadController.markAsRead);
+router.post('/message/comment', ThreadController.commentOnMessage);
 
 export const ThreadRoutes = router;

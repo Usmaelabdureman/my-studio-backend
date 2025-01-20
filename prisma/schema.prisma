@@ -42,6 +42,7 @@ model Thread {
   type         ThreadType          @default(DIRECT)
   name         String?             // Optional name for the thread
   member_count Int                 @default(0) // Member count for the thread
+  unread_count Int                 @default(0) 
   created_at   DateTime            @default(now())
   updated_at   DateTime            @updatedAt
   participants ThreadParticipant[]
@@ -62,18 +63,38 @@ model ThreadParticipant {
   @@map("thread_participants")
 }
 
+// model Message {
+//   id          String      @id @default(uuid())
+//   thread_id   String
+//   author_id   String
+//   type        MessageType @default(TEXT)
+//   content     String?
+//   file_url    String?
+//   created_at  DateTime    @default(now())
+//   updated_at  DateTime    @updatedAt
+
+//   thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
+//   author User   @relation(fields: [author_id], references: [email])
+
+//   @@map("messages")
+// }
 model Message {
-  id          String      @id @default(uuid())
-  thread_id   String
-  author_id   String
-  type        MessageType @default(TEXT)
-  content     String?
-  file_url    String?
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
+  id                String      @id @default(uuid())
+  thread_id         String
+  author_id         String
+  type              MessageType @default(TEXT)
+  content           String?
+  file_url          String?
+  parent_message_id String?    
+  read_status       Boolean     @default(false)
+  is_edited         Boolean     @default(false) 
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
 
   thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
   author User   @relation(fields: [author_id], references: [email])
+  parent Message? @relation("MessageToParent",fields: [parent_message_id], references: [id])
+  children Message[] @relation("MessageToParent")
 
   @@map("messages")
 }
