@@ -22,13 +22,24 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ThreadRoutes = void 0;
 const express_1 = require("express");
 const ThreadController = __importStar(require("./Thread.controllers"));
+const multer_1 = __importDefault(require("multer"));
 const router = (0, express_1.Router)();
+const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
 router.post('/create', ThreadController.createThread);
 router.get('/', ThreadController.getThreads);
-router.post('/message', ThreadController.addMessage);
+router.post('/message', upload.single('file'), ThreadController.addMessage);
 router.get('/:threadId/messages', ThreadController.getMessages);
+router.put('/message/edit', ThreadController.editMessage);
+router.delete('/message/delete', ThreadController.deleteMessage);
+router.post('/message/reply', ThreadController.replyToMessage);
+// router.get('/thread/:threadId/unread-count', ThreadController.getUnreadCount);
+router.post('/thread/mark-as-read', ThreadController.markAsRead);
+router.post('/message/comment', ThreadController.commentOnMessage);
 exports.ThreadRoutes = router;

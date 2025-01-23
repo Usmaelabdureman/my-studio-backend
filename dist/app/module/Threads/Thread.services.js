@@ -12,15 +12,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserThreads = exports.getThreadMessages = exports.addMessage = exports.updateThreadName = exports.createThread = void 0;
+exports.getUserThreads = exports.getThreadMessages = exports.markMessagesAsRead = exports.commentOnMessage = exports.replyToMessage = exports.deleteMessage = exports.editMessage = exports.addMessage = exports.updateThreadName = exports.createThread = void 0;
+const path_1 = __importDefault(require("path"));
 const prisma_1 = __importDefault(require("../../shared/prisma"));
 const supabase_1 = __importDefault(require("../../shared/supabase"));
+const uuid_1 = require("uuid");
 const createThread = (type, participants, name, initialMessage) => __awaiter(void 0, void 0, void 0, function* () {
-    // Ensure name is set for GROUP threads
     if (type === 'GROUP' && !name) {
         name = 'Untitled Group';
     }
-    // Validate initialMessage
     if (initialMessage) {
         const { authorId, content, type: messageType } = initialMessage;
         if (!authorId || typeof authorId !== 'string') {
@@ -29,7 +29,7 @@ const createThread = (type, participants, name, initialMessage) => __awaiter(voi
         if (!content || typeof content !== 'string') {
             throw new Error('Invalid initialMessage: "content" is required and must be a string');
         }
-        if (!messageType || (messageType !== 'TEXT' && messageType !== 'IMAGE')) {
+        if (!messageType || (messageType !== 'TEXT' && messageType !== 'FILE')) {
             throw new Error('Invalid initialMessage: "type" must be "TEXT" or "IMAGE"');
         }
     }
@@ -65,40 +65,139 @@ const updateThreadName = (threadId, name) => __awaiter(void 0, void 0, void 0, f
     return updatedThread;
 });
 exports.updateThreadName = updateThreadName;
-const addMessage = (threadId, authorId, content, type) => __awaiter(void 0, void 0, void 0, function* () {
-    const message = yield prisma_1.default.message.create({
+const addMessage = (threadId, authorId, content, type, file) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    let fileUrl = null;
+    if (type === 'FILE' && file) {
+        const fileExt = path_1.default.extname(file.originalname);
+        const fileName = `${(0, uuid_1.v4)()}${fileExt}`;
+        const { data, error } = yield supabase_1.default.storage
+            .from('chat-bucket')
+            .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true,
+        });
+        if (error) {
+            throw new Error('Error uploading file to Supabase');
+        }
+        fileUrl = (_a = supabase_1.default.storage.from('chat-bucket').getPublicUrl(fileName).data) === null || _a === void 0 ? void 0 : _a.publicUrl;
+    }
+    const messageData = {
+        thread_id: threadId,
+        author_id: authorId,
+        content: content || '',
+        file_url: fileUrl || '',
+        type,
+    };
+    const newMessage = yield prisma_1.default.message.create({
+        data: messageData,
+    });
+    yield prisma_1.default.thread.update({
+        where: { id: threadId },
+        data: {
+            unread_count: {
+                increment: 1
+            }
+        },
+    });
+    return newMessage;
+});
+exports.addMessage = addMessage;
+// edit message
+const editMessage = (messageId, newContent, thread_id, author_id) => __awaiter(void 0, void 0, void 0, function* () {
+    const updatedMessage = yield prisma_1.default.message.update({
+        where: { id: messageId, thread_id: thread_id, author_id: author_id },
+        data: { content: newContent,
+            is_edited: true,
+        },
+    });
+    return updatedMessage;
+});
+exports.editMessage = editMessage;
+// Delete Mesage
+const deleteMessage = (messageId) => __awaiter(void 0, void 0, void 0, function* () {
+    const deletedMessage = yield prisma_1.default.message.delete({
+        where: { id: messageId },
+    });
+    return deletedMessage;
+});
+exports.deleteMessage = deleteMessage;
+// Reply to a message
+const replyToMessage = (threadId, authorId, parentMessageId, content) => __awaiter(void 0, void 0, void 0, function* () {
+    const reply = yield prisma_1.default.message.create({
         data: {
             thread_id: threadId,
             author_id: authorId,
-            content,
-            type,
+            content: content,
+            parent_message_id: parentMessageId,
+            type: 'TEXT',
         },
     });
-    // Sync message to Supabase
-    yield supabase_1.default.from('messages').insert({
-        thread_id: threadId,
-        author_id: authorId,
-        content,
-        type,
-        created_at: new Date().toISOString(),
-    });
-    return message;
+    return reply;
 });
-exports.addMessage = addMessage;
+exports.replyToMessage = replyToMessage;
+// comment on message
+const commentOnMessage = (threadId, authorId, parentMessageId, content) => __awaiter(void 0, void 0, void 0, function* () {
+    return (0, exports.replyToMessage)(threadId, authorId, parentMessageId, content);
+});
+exports.commentOnMessage = commentOnMessage;
+// }
+const markMessagesAsRead = (threadId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    yield prisma_1.default.message.updateMany({
+        where: {
+            thread_id: threadId,
+            author_id: {
+                not: userId,
+            },
+            read_status: false,
+        },
+        data: { read_status: true },
+    });
+    const unreadMessagesCount = yield prisma_1.default.message.count({
+        where: {
+            thread_id: threadId,
+            read_status: false,
+        },
+    });
+    yield prisma_1.default.thread.update({
+        where: { id: threadId },
+        data: { unread_count: unreadMessagesCount },
+    });
+});
+exports.markMessagesAsRead = markMessagesAsRead;
 const getThreadMessages = (threadId, onNewMessage) => __awaiter(void 0, void 0, void 0, function* () {
     const messages = yield prisma_1.default.message.findMany({
         where: { thread_id: threadId },
         orderBy: { created_at: 'asc' },
+        include: {
+            author: {
+                select: {
+                    id: true,
+                    first_name: true,
+                    last_name: true,
+                    profile_pic: true,
+                    status: true,
+                },
+            },
+        },
     });
-    if (onNewMessage) {
-        supabase_1.default
-            .channel(`thread:${threadId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` }, (payload) => {
-            onNewMessage(payload.new);
-        })
-            .subscribe();
-    }
-    return messages;
+    return messages.map((message) => ({
+        id: message.id,
+        threadId: message.thread_id,
+        content: message.content,
+        createdAt: message.created_at,
+        type: message.type,
+        author: {
+            id: message.author_id,
+            name: message.author.first_name + ' ' + message.author.last_name,
+            avatar: message.author.profile_pic || '',
+            isActive: message.author.status,
+        },
+        file_url: message.file_url,
+        isEdited: message.is_edited,
+        parentMessageId: message.parent_message_id,
+        read_status: message.read_status,
+    }));
 });
 exports.getThreadMessages = getThreadMessages;
 const getUserThreads = (userId, onNewThread) => __awaiter(void 0, void 0, void 0, function* () {
@@ -111,21 +210,31 @@ const getUserThreads = (userId, onNewThread) => __awaiter(void 0, void 0, void 0
             },
         },
         include: {
-            participants: true,
-            messages: {
-                orderBy: { created_at: 'asc' },
+            participants: {
+                select: {
+                    user_id: true,
+                    user: {
+                        select: {
+                            first_name: true,
+                            last_name: true,
+                            profile_pic: true,
+                        },
+                    },
+                },
             },
         },
     });
-    // If a real-time listener is needed
-    if (onNewThread) {
-        supabase_1.default
-            .channel(`user:${userId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'threads', filter: `participants=like.%${userId}%` }, (payload) => {
-            onNewThread(payload.new);
-        })
-            .subscribe();
-    }
-    return threads;
+    // Transform the data to match frontend expectations
+    return threads.map((thread) => ({
+        id: thread.id,
+        type: thread.type || null,
+        participants: thread.participants.map((participant) => ({
+            id: participant.user_id,
+            name: `${participant.user.first_name} ${participant.user.last_name}`,
+            avatar: (participant === null || participant === void 0 ? void 0 : participant.user.profile_pic) || '',
+        })),
+        unreadCount: thread.unread_count || 0,
+        name: thread.name || null,
+    }));
 });
 exports.getUserThreads = getUserThreads;

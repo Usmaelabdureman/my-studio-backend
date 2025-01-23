@@ -134,30 +134,28 @@
  *   post:
  *     summary: Add a message to a thread
  *     tags: [Thread]
- *     parameters:
- *       - name: threadId
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *           example: "thread123"
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
+ *               threadId:
+ *                 type: string
  *               authorId:
  *                 type: string
  *                 example: "user1"
  *               content:
  *                 type: string
- *                 example: "Let's get started!"
+ *                 example: "Here is a file to check out!"
  *               type:
  *                 type: string
- *                 enum: ["TEXT", "IMAGE"]
- *                 example: "TEXT"
+ *                 enum: ["TEXT", "FILE"]
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: The file to upload (only for FILE type)
  *     responses:
  *       200:
  *         description: Message added successfully
@@ -165,6 +163,10 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Bad request, invalid input
+ *       500:
+ *         description: Server error
  */
 /**
  * @swagger
@@ -188,4 +190,135 @@
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Message'
+ */
+/**
+ * @swagger
+ * /threads/message/edit:
+ *   put:
+ *     summary: Edit a message in a thread
+ *     tags: [Thread]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               messageId:
+ *                 type: string
+ *                 example: "msg123"
+ *               thread_id:
+ *                 type: string
+ *                 example: "thread123"
+ *               author_id:
+ *                type: string
+ *                example: "user1"
+ *               newContent:
+ *                 type: string
+ *                 example: "Hello, world! (edited)"
+ *     responses:
+ *       200:
+ *         description: Message edited successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Bad request, invalid input
+ *       500:
+ *         description: Server error
+ */
+/**
+ * @swagger
+ * /threads/message/delete:
+ *   delete:
+ *     summary: Delete a message in a thread
+ *     tags: [Thread]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               messageId:
+ *                 type: string
+ *                 example: "msg123"
+ *     responses:
+ *       200:
+ *         description: Message deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Bad request, invalid input
+ *       500:
+ *         description: Server error
+ */
+/**
+ * @swagger
+ * /threads/message/reply:
+ *   post:
+ *     summary: Reply to a message in a thread
+ *     tags: [Thread]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               threadId:
+ *                 type: string
+ *                 example: "thread123"
+ *               authorId:
+ *                 type: string
+ *                 example: "user1"
+ *               parentMessageId:
+ *                 type: string
+ *                 example: "msg123"
+ *               content:
+ *                 type: string
+ *                 example: "I agree!"
+ *     responses:
+ *       200:
+ *         description: Reply added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ */
+/**
+ * @swagger
+ * /threads/message/comment:
+ *   post:
+ *     summary: Comment on a message in a thread
+ *     tags: [Thread]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               threadId:
+ *                 type: string
+ *                 example: "thread123"
+ *               authorId:
+ *                 type: string
+ *                 example: "user1"
+ *               parentMessageId:
+ *                 type: string
+ *                 example: "msg123"
+ *               content:
+ *                 type: string
+ *                 example: "I agree!"
+ *     responses:
+ *       200:
+ *         description: Comment added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
  */

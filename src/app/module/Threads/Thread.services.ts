@@ -9,12 +9,10 @@ export const createThread = async (
   name?: string,
   initialMessage?: { authorId: string; content: string; type: 'TEXT' | 'FILE', }
 ) => {
-  // Ensure name is set for GROUP threads
   if (type === 'GROUP' && !name) {
     name = 'Untitled Group';
   }
 
-  // Validate initialMessage
   if (initialMessage) {
     const { authorId, content, type: messageType } = initialMessage;
     if (!authorId || typeof authorId !== 'string') {
@@ -74,15 +72,12 @@ export const updateThreadName = async (threadId: string, name: string) => {
 export const addMessage = async (threadId: string, authorId: string, content: string, type: 'TEXT' | 'FILE', file: Express.Multer.File | null) => {
   let fileUrl = null;
 
-  // If the type is "FILE", we handle file upload to Supabase
   if (type === 'FILE' && file) {
-    // Generate a unique filename using current timestamp and file extension
     const fileExt = path.extname(file.originalname);
     const fileName = `${uuidv4()}${fileExt}`;
 
-    // Upload file to Supabase Storage
     const { data, error } = await supabase.storage
-      .from('general') 
+      .from('chat-bucket') 
       .upload(fileName, file.buffer, {
         contentType: file.mimetype,
         upsert: true,
@@ -91,23 +86,19 @@ export const addMessage = async (threadId: string, authorId: string, content: st
     if (error) {
       throw new Error('Error uploading file to Supabase');
     }
-
-    // Get the public URL for the uploaded file
-    fileUrl = supabase.storage.from('general').getPublicUrl(fileName).data?.publicUrl;
+    fileUrl = supabase.storage.from('chat-bucket').getPublicUrl(fileName).data?.publicUrl;
   }
 
   
-  // Create the message data (whether it is text or file)
   const messageData = {
     thread_id: threadId,
     author_id: authorId,
-    content: content || '', // Content can be empty if only a file is uploaded
-    file_url: fileUrl || '', // Store file URL if file exists
+    content: content || '',
+    file_url: fileUrl || '', 
     type, 
   };
 
-  // Save the message to the database using Prisma
-  // console.log("messageData",messageData)
+
   const newMessage = await prisma.message.create({
     data: messageData,
   });
@@ -168,22 +159,8 @@ export const commentOnMessage = async (
   return replyToMessage(threadId, authorId, parentMessageId, content);
 };
 
-// get unread messages
-
-// export const getUnreadMessages = async(threadId: string, userId: string)=>{
-//   const unreadCount = await prisma.message.findMany({
-//     where: {
-//       thread_id: threadId,
-//       author_id: {
-//         not: userId,
-//       },
-//       read_status: false,
-//     },
-//   });
-//   return unreadCount;
 // }
 export const markMessagesAsRead = async (threadId: string, userId: string) => {
-  // Mark all messages as read for the user in this thread
   await prisma.message.updateMany({
     where: {
       thread_id: threadId,
@@ -195,7 +172,6 @@ export const markMessagesAsRead = async (threadId: string, userId: string) => {
     data: { read_status: true },
   });
 
-  // Update the unread count in the thread
   const unreadMessagesCount = await prisma.message.count({
     where: {
       thread_id: threadId,
@@ -210,18 +186,50 @@ export const markMessagesAsRead = async (threadId: string, userId: string) => {
 };
 
 
-export const getThreadMessages = async (threadId: string, onNewMessage?: (message: any) => void) => {
+export const getThreadMessages = async (
+  threadId: string,
+  onNewMessage?: (message: any) => void
+) => {
   const messages = await prisma.message.findMany({
     where: { thread_id: threadId },
     orderBy: { created_at: 'asc' },
+    include: {
+      author: {
+        select: {
+         id: true,
+         first_name:true,
+         last_name:true,
+         profile_pic:true,
+         status:true,
+        },
+      },
+    },
   });
 
-
-  return messages;
+  return messages.map((message) => ({
+    id: message.id,
+    threadId: message.thread_id,
+    content: message.content,
+    createdAt: message.created_at,
+    type: message.type,
+    author: {
+      id: message.author_id,
+      name: message.author.first_name + ' ' + message.author.last_name,
+      avatar: message.author.profile_pic || '' ,
+      isActive: message.author.status,
+    },
+    file_url: message.file_url,
+    isEdited: message.is_edited,
+    parentMessageId: message.parent_message_id,
+    read_status: message.read_status,
+  }));
 };
 
 
-export const getUserThreads = async (userId: string, onNewThread?: (thread: any) => void) => {
+export const getUserThreads = async (
+  userId: string,
+  onNewThread?: (thread: any) => void
+) => {
   const threads = await prisma.thread.findMany({
     where: {
       participants: {
@@ -231,14 +239,31 @@ export const getUserThreads = async (userId: string, onNewThread?: (thread: any)
       },
     },
     include: {
-      participants: true,
-      messages: {
-        orderBy: { created_at: 'asc' },
+      participants: {
+        select: {
+          user_id: true,
+          user: {
+            select: {
+              first_name: true,
+              last_name: true,
+              profile_pic: true, 
+            },
+          },
+        },
       },
     },
   });
 
-
-
-  return threads;
+  // Transform the data to match frontend expectations
+  return threads.map((thread) => ({
+    id: thread.id,
+    type: thread.type || null,
+    participants: thread.participants.map((participant) => ({
+      id: participant.user_id,
+      name: `${participant.user.first_name} ${participant.user.last_name}`,
+      avatar: participant?.user.profile_pic || '',
+    })),
+    unreadCount: thread.unread_count || 0,
+    name: thread.name || null,
+  }));
 };
