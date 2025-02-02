@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserThreads = exports.getThreadMessages = exports.markMessagesAsRead = exports.commentOnMessage = exports.replyToMessage = exports.deleteMessage = exports.editMessage = exports.addMessage = exports.updateThreadName = exports.createThread = void 0;
+exports.getContactsByQuery = exports.getUserThreads = exports.getThreadMessages = exports.markMessagesAsRead = exports.commentOnMessage = exports.replyToMessage = exports.deleteMessage = exports.editMessage = exports.addMessage = exports.updateThreadName = exports.createThread = void 0;
 const path_1 = __importDefault(require("path"));
 const prisma_1 = __importDefault(require("../../shared/prisma"));
 const supabase_1 = __importDefault(require("../../shared/supabase"));
@@ -181,23 +181,26 @@ const getThreadMessages = (threadId, onNewMessage) => __awaiter(void 0, void 0, 
             },
         },
     });
-    return messages.map((message) => ({
-        id: message.id,
-        threadId: message.thread_id,
-        content: message.content,
-        createdAt: message.created_at,
-        type: message.type,
-        author: {
-            id: message.author_id,
-            name: message.author.first_name + ' ' + message.author.last_name,
-            avatar: message.author.profile_pic || '',
-            isActive: message.author.status,
-        },
-        file_url: message.file_url,
-        isEdited: message.is_edited,
-        parentMessageId: message.parent_message_id,
-        read_status: message.read_status,
-    }));
+    return messages.map((message) => {
+        var _a, _b;
+        return ({
+            id: message.id,
+            threadId: message.thread_id,
+            content: message.content,
+            createdAt: message.created_at,
+            type: message.type,
+            author: {
+                id: message.author_id,
+                name: ((_a = message.author) === null || _a === void 0 ? void 0 : _a.first_name) + ' ' + ((_b = message.author) === null || _b === void 0 ? void 0 : _b.last_name),
+                avatar: message.author.profile_pic || '',
+                isActive: message.author.status,
+            },
+            file_url: message.file_url,
+            isEdited: message.is_edited,
+            parentMessageId: message.parent_message_id,
+            read_status: message.read_status,
+        });
+    });
 });
 exports.getThreadMessages = getThreadMessages;
 const getUserThreads = (userId, onNewThread) => __awaiter(void 0, void 0, void 0, function* () {
@@ -227,14 +230,46 @@ const getUserThreads = (userId, onNewThread) => __awaiter(void 0, void 0, void 0
     // Transform the data to match frontend expectations
     return threads.map((thread) => ({
         id: thread.id,
-        type: thread.type || null,
-        participants: thread.participants.map((participant) => ({
-            id: participant.user_id,
-            name: `${participant.user.first_name} ${participant.user.last_name}`,
-            avatar: (participant === null || participant === void 0 ? void 0 : participant.user.profile_pic) || '',
-        })),
+        type: thread.type || '',
+        participants: thread.participants.map((participant) => {
+            var _a, _b;
+            return ({
+                id: participant.user_id,
+                name: `${(_a = participant.user) === null || _a === void 0 ? void 0 : _a.first_name} ${(_b = participant.user) === null || _b === void 0 ? void 0 : _b.last_name}`,
+                avatar: (participant === null || participant === void 0 ? void 0 : participant.user.profile_pic) || '',
+            });
+        }),
         unreadCount: thread.unread_count || 0,
-        name: thread.name || null,
+        name: thread.name || '',
+        member_count: thread.member_count || 0,
     }));
 });
 exports.getUserThreads = getUserThreads;
+const getContactsByQuery = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    const users = yield prisma_1.default.user.findMany({
+        where: {
+            OR: [
+                {
+                    first_name: {
+                        contains: query,
+                    },
+                },
+                {
+                    last_name: {
+                        contains: query,
+                    },
+                },
+            ],
+        },
+    });
+    return users.map((user) => ({
+        id: user.email,
+        name: `${user.first_name} ${user === null || user === void 0 ? void 0 : user.last_name}`,
+        avatar: user.profile_pic || '',
+        status: user.status,
+        email: user.email,
+        profile_pic: user === null || user === void 0 ? void 0 : user.profile_pic,
+        isActive: user.status === 'ACTIVE',
+    }));
+});
+exports.getContactsByQuery = getContactsByQuery;

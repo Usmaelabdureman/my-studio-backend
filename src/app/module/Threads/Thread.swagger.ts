@@ -331,3 +331,36 @@
  *             schema:
  *               $ref: '#/components/schemas/Message'
  */
+
+
+// get contacts by query
+/**
+ * @swagger
+ * /threads/contacts:
+ *   get:
+ *     summary: Get contacts by query string
+ *     tags: [Thread]
+ *     parameters:
+ *       - name: query
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "John Doe"
+ *     responses:
+ *       200:
+ *         description: List of contacts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   user_id:
+ *                     type: string
+ *                     example: "user1"
+ *                   name:
+ *                     type: string
+ *                     example: "John Doe"
+ */

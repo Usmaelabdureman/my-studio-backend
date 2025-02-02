@@ -2,6 +2,7 @@ import path from 'path';
 import prisma from '../../shared/prisma';
 import  supabase  from '../../shared/supabase';
 import {v4 as uuidv4} from 'uuid';
+import { profile } from 'console';
 
 export const createThread = async (
   type: 'DIRECT' | 'GROUP',
@@ -214,7 +215,7 @@ export const getThreadMessages = async (
     type: message.type,
     author: {
       id: message.author_id,
-      name: message.author.first_name + ' ' + message.author.last_name,
+      name: message.author?.first_name + ' ' + message.author?.last_name,
       avatar: message.author.profile_pic || '' ,
       isActive: message.author.status,
     },
@@ -257,13 +258,44 @@ export const getUserThreads = async (
   // Transform the data to match frontend expectations
   return threads.map((thread) => ({
     id: thread.id,
-    type: thread.type || null,
+    type: thread.type || '',
     participants: thread.participants.map((participant) => ({
       id: participant.user_id,
-      name: `${participant.user.first_name} ${participant.user.last_name}`,
+      name: `${participant.user?.first_name} ${participant.user?.last_name}`,
       avatar: participant?.user.profile_pic || '',
     })),
     unreadCount: thread.unread_count || 0,
-    name: thread.name || null,
+    name: thread.name || '',
+    member_count: thread.member_count || 0,
+  }));
+};
+
+
+export const getContactsByQuery = async (query: string) => {
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        {
+          first_name: {
+            contains: query,
+          },
+        },
+        {
+          last_name: {
+            contains: query,
+          },
+        },
+      ],
+    },
+  });
+
+  return users.map((user) => ({
+    id: user.email,
+    name: `${user.first_name} ${user?.last_name}`,
+    avatar: user.profile_pic || '',
+    status: user.status,
+    email: user.email,
+    profile_pic: user?.profile_pic,
+    isActive: user.status === 'ACTIVE',
   }));
 };

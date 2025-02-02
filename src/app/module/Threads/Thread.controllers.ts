@@ -67,3 +67,12 @@ export const commentOnMessage = catchAsync(async (req: Request, res: Response) =
   const comment = await ThreadService.commentOnMessage(threadId, authorId, parentMessageId, content);
   res.status(201).json({ success: true, data: comment });
 });
+
+//  get contacts by query string
+
+export const getContacts = catchAsync(async (req: Request, res: Response) => {
+  const { query } = req.query;
+  const contacts = await ThreadService.getContactsByQuery(query as string);
+  res.status(200).json({ success: true, data: contacts });
+}
+);

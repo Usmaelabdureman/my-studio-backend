@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.commentOnMessage = exports.markAsRead = exports.replyToMessage = exports.deleteMessage = exports.editMessage = exports.getMessages = exports.addMessage = exports.getThreads = exports.createThread = void 0;
+exports.getContacts = exports.commentOnMessage = exports.markAsRead = exports.replyToMessage = exports.deleteMessage = exports.editMessage = exports.getMessages = exports.addMessage = exports.getThreads = exports.createThread = void 0;
 const catchAsync_1 = __importDefault(require("../../shared/catchAsync"));
 const ThreadService = __importStar(require("./Thread.services"));
 exports.createThread = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -91,4 +91,10 @@ exports.commentOnMessage = (0, catchAsync_1.default)((req, res) => __awaiter(voi
     const { threadId, authorId, parentMessageId, content } = req.body;
     const comment = yield ThreadService.commentOnMessage(threadId, authorId, parentMessageId, content);
     res.status(201).json({ success: true, data: comment });
+}));
+//  get contacts by query string
+exports.getContacts = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { query } = req.query;
+    const contacts = yield ThreadService.getContactsByQuery(query);
+    res.status(200).json({ success: true, data: contacts });
 }));

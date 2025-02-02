@@ -14,8 +14,8 @@ router.get('/:threadId/messages', ThreadController.getMessages);
 router.put('/message/edit', ThreadController.editMessage);
 router.delete('/message/delete', ThreadController.deleteMessage);
 router.post('/message/reply', ThreadController.replyToMessage);
-// router.get('/thread/:threadId/unread-count', ThreadController.getUnreadCount);
 router.post('/thread/mark-as-read', ThreadController.markAsRead);
 router.post('/message/comment', ThreadController.commentOnMessage);
+router.get('/contacts', ThreadController.getContacts);
 
 export const ThreadRoutes = router;
