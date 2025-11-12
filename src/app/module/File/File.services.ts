@@ -17,7 +17,7 @@ const filesUpload = async (req: Request & { user?: TAuthUser }) => {
         throw new ApiError(httpStatus.BAD_REQUEST, "No file found");
     }
 
-    const prepared_files: Prisma.FileCreateManyInput[] = [];
+    const prepared_files: any[] = [];
 
 
     if (files?.files) {
