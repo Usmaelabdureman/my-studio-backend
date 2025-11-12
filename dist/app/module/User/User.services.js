@@ -25,11 +25,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserServices = void 0;
 const sharp_1 = __importDefault(require("sharp"));
-const config_1 = __importDefault(require("../../config"));
 const common_1 = require("../../constants/common");
 const ApiError_1 = __importDefault(require("../../error/ApiError"));
 const prisma_1 = __importDefault(require("../../shared/prisma"));
-const supabase_1 = __importDefault(require("../../shared/supabase"));
+const gridfs_1 = __importDefault(require("../../shared/gridfs"));
 const fieldValidityChecker_1 = __importDefault(require("../../utils/fieldValidityChecker"));
 const pagination_1 = __importDefault(require("../../utils/pagination"));
 const User_constants_1 = require("./User.constants");
@@ -107,14 +106,8 @@ const updateProfile = (user, payload, file) => __awaiter(void 0, void 0, void 0,
     if (file) {
         const metadata = yield (0, sharp_1.default)(file.buffer).metadata();
         const fileName = `${Date.now()}_${file.originalname}`;
-        const { data } = yield supabase_1.default.storage
-            .from(config_1.default.supabase_bucket_general)
-            .upload(fileName, file.buffer, {
-            contentType: file.mimetype,
-        });
-        if (!(data === null || data === void 0 ? void 0 : data.id)) {
-            throw new ApiError_1.default(httpStatus.INTERNAL_SERVER_ERROR, "Failed to upload profile picture");
-        }
+        // Upload image to GridFS and store a local path for serving via /files/:filename
+        yield gridfs_1.default.uploadFile(file.buffer, fileName, file.mimetype);
         const image = {
             user_id: user.id,
             name: file.originalname,
@@ -123,32 +116,17 @@ const updateProfile = (user, payload, file) => __awaiter(void 0, void 0, void 0,
             size: file.size,
             width: metadata.width || 0,
             height: metadata.height || 0,
-            path: `/${config_1.default.supabase_bucket_general}/${data.path}`,
-            bucket_id: data.id,
+            path: `/files/${fileName}`,
+            bucket_id: fileName, // store filename as bucket id for reference
         };
-        profilePic = yield prisma_1.default.file.create({
-            data: image,
-        });
-        const userInfo = yield prisma_1.default.user.findUniqueOrThrow({
-            where: {
-                id: user.id,
-            },
-        });
+        profilePic = yield prisma_1.default.file.create({ data: image });
+        const userInfo = yield prisma_1.default.user.findUniqueOrThrow({ where: { id: user.id } });
         if (userInfo.profile_pic) {
-            const profilePic = yield prisma_1.default.file.findFirst({
-                where: {
-                    path: userInfo.profile_pic,
-                },
-            });
+            const profilePic = yield prisma_1.default.file.findFirst({ where: { path: userInfo.profile_pic } });
             if (profilePic) {
-                yield supabase_1.default.storage
-                    .from(config_1.default.supabase_bucket_general)
-                    .remove([profilePic.path.split("/").pop() || ""]);
-                yield prisma_1.default.file.delete({
-                    where: {
-                        id: profilePic.id,
-                    },
-                });
+                // delete old file from GridFS by filename stored in bucket_id
+                yield gridfs_1.default.deleteFile(profilePic.bucket_id);
+                yield prisma_1.default.file.delete({ where: { id: profilePic.id } });
             }
         }
     }

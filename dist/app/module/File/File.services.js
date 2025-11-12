@@ -14,10 +14,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileServices = void 0;
 const sharp_1 = __importDefault(require("sharp"));
-const config_1 = __importDefault(require("../../config"));
 const ApiError_1 = __importDefault(require("../../error/ApiError"));
 const prisma_1 = __importDefault(require("../../shared/prisma"));
-const supabase_1 = __importDefault(require("../../shared/supabase"));
+const gridfs_1 = __importDefault(require("../../shared/gridfs"));
 const File_constants_1 = require("./File.constants");
 const filesUpload = (req) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -35,31 +34,25 @@ const filesUpload = (req) => __awaiter(void 0, void 0, void 0, function* () {
             }
             const name = `${Date.now()}-${file.originalname}`;
             const metadata = yield (0, sharp_1.default)(file.buffer).metadata();
-            const { data } = yield supabase_1.default.storage
-                .from(config_1.default.supabase_bucket_general)
-                .upload(name, file.buffer, {
-                contentType: file.mimetype,
+            // Upload file buffer to GridFS
+            yield gridfs_1.default.uploadFile(file.buffer, name, file.mimetype);
+            prepared_files.push({
+                user_id: user.id,
+                name: file.originalname,
+                alt_text: file.originalname.replace(/\.[^/.]+$/, ""),
+                type: file.mimetype,
+                size: file.size,
+                width: metadata.width || 0,
+                height: metadata.height || 0,
+                path: `/files/${name}`,
+                bucket_id: name,
             });
-            if (data === null || data === void 0 ? void 0 : data.id) {
-                prepared_files.push({
-                    user_id: user.id,
-                    name: file.originalname,
-                    alt_text: file.originalname.replace(/\.[^/.]+$/, ""),
-                    type: file.mimetype,
-                    size: file.size,
-                    width: metadata.width || 0,
-                    height: metadata.height || 0,
-                    path: `/${config_1.default.supabase_bucket_general}/${data.path}`,
-                    bucket_id: data.id,
-                });
-            }
         }
     }
     const uploaded_files = prepared_files.map((i) => i.path);
     const result = yield prisma_1.default.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
         yield prisma_1.default.file.createMany({
             data: prepared_files,
-            skipDuplicates: true,
         });
         const files = yield prisma_1.default.file.findMany({
             where: {

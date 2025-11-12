@@ -50,7 +50,6 @@ const filesUpload = async (req: Request & { user?: TAuthUser }) => {
     const result = await prisma.$transaction(async (tx) => {
         await prisma.file.createMany({
             data: prepared_files,
-            skipDuplicates: true,
         })
 
         const files = await prisma.file.findMany({

@@ -16,7 +16,6 @@ exports.default = {
     jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
     wolfstudios_email: process.env.WOLFSTUDIOS_EMAIL,
     email_app_pass: process.env.EMAIL_APP_PASS,
-    supabase_bucket_key: process.env.SUPABASE_BUCKET_KEY,
-    supabase_bucket_url: process.env.SUPABASE_BUCKET_URL,
-    supabase_bucket_general: process.env.SUPABASE_BUCKET_GENERAL,
+    // DATABASE_URL is used by Prisma and the GridFS helper. Set this to your MongoDB Atlas connection string.
+    database_url: process.env.DATABASE_URL,
 };

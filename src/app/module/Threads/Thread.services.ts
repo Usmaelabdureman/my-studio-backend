@@ -41,7 +41,6 @@ export const createThread = async (
   if (participants?.length) {
     await prisma.threadParticipant.createMany({
       data: participants.map((userId) => ({ thread_id: thread.id, user_id: userId })),
-      skipDuplicates: true,
     });
   }
 
