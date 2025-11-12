@@ -10,8 +10,7 @@ declare namespace NodeJS {
     JWT_REFRESH_EXPIRES_IN: string;
     WOLFSTUDIOS_EMAIL: string;
     EMAIL_APP_PASS: string;
-    SUPABASE_BUCKET_KEY: string;
-    SUPABASE_BUCKET_URL: string;
-    SUPABASE_BUCKET_GENERAL: string;
+    // Supabase env vars removed; GridFS + MongoDB uses DATABASE_URL
+    DATABASE_URL: string;
   }
 }

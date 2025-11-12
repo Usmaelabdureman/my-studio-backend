@@ -6,6 +6,7 @@ import globalErrorHandler from "./app/middlewares/globalErrorHandler";
 import notFoundHandler from "./app/middlewares/notFoundHandler";
 import router from "./app/routes";
 import swaggerSpec from "./swagger";
+import gridfs from "./app/shared/gridfs";
 
 const app: Application = express();
 
@@ -29,6 +30,17 @@ app.get("/", (req, res) => {
     success: true,
     message: "Esmu  server is working fine",
   });
+});
+
+// Serve files stored in GridFS at /files/:filename
+app.get('/files/:filename', async (req, res) => {
+  const { filename } = req.params;
+  try {
+    const stream = await gridfs.getFileStream(filename);
+    stream.pipe(res);
+  } catch (err) {
+    res.status(404).json({ success: false, message: 'File not found' });
+  }
 });
 
 // api routes

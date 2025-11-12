@@ -6,7 +6,7 @@ import ApiError from "../../error/ApiError";
 import { TAuthUser } from "../../interfaces/common";
 import { TFile } from "../../interfaces/file";
 import prisma from "../../shared/prisma";
-import supabase from "../../shared/supabase";
+import gridfs from "../../shared/gridfs";
 import fieldValidityChecker from "../../utils/fieldValidityChecker";
 import pagination from "../../utils/pagination";
 import {
@@ -111,18 +111,8 @@ const updateProfile = async (
   if (file) {
     const metadata = await sharp(file.buffer).metadata();
     const fileName = `${Date.now()}_${file.originalname}`;
-    const { data } = await supabase.storage
-      .from(config.supabase_bucket_general)
-      .upload(fileName, file.buffer, {
-        contentType: file.mimetype,
-      });
-
-    if (!data?.id) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "Failed to upload profile picture"
-      );
-    }
+    // Upload image to GridFS and store a local path for serving via /files/:filename
+    await gridfs.uploadFile(file.buffer, fileName, file.mimetype);
 
     const image = {
       user_id: user.id,
@@ -132,35 +122,20 @@ const updateProfile = async (
       size: file.size,
       width: metadata.width || 0,
       height: metadata.height || 0,
-      path: `/${config.supabase_bucket_general}/${data.path}`,
-      bucket_id: data.id,
+      path: `/files/${fileName}`,
+      bucket_id: fileName, // store filename as bucket id for reference
     };
 
-    profilePic = await prisma.file.create({
-      data: image,
-    });
+    profilePic = await prisma.file.create({ data: image });
 
-    const userInfo = await prisma.user.findUniqueOrThrow({
-      where: {
-        id: user.id,
-      },
-    });
+    const userInfo = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
 
     if (userInfo.profile_pic) {
-      const profilePic = await prisma.file.findFirst({
-        where: {
-          path: userInfo.profile_pic,
-        },
-      });
+      const profilePic = await prisma.file.findFirst({ where: { path: userInfo.profile_pic } });
       if (profilePic) {
-        await supabase.storage
-          .from(config.supabase_bucket_general)
-          .remove([profilePic.path.split("/").pop() || ""]);
-        await prisma.file.delete({
-          where: {
-            id: profilePic.id,
-          },
-        });
+        // delete old file from GridFS by filename stored in bucket_id
+        await gridfs.deleteFile(profilePic.bucket_id);
+        await prisma.file.delete({ where: { id: profilePic.id } });
       }
     }
   }

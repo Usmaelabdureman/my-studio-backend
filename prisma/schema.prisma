@@ -9,14 +9,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 
 }
 
 model User {
-  id                  String     @id @default(uuid())
+  // MongoDB ID: stored as _id in MongoDB and represented as a String in Prisma
+  id                  String     @id @map("_id") @default(auto()) @db.ObjectId
   first_name          String
   last_name           String?
   email               String     @unique
@@ -29,35 +29,32 @@ model User {
   password_changed_at DateTime   @default(now())
   created_at          DateTime   @default(now())
   updated_at          DateTime   @updatedAt
-  Campaign            Campaign[]
-  File                File[]
-  ThreadParticipant   ThreadParticipant[]
-  Message             Message[]
 
+  // NOTE: relational object fields removed for MongoDB migration.
+  // Keep foreign key scalar fields on related models (e.g. user_id on Campaign, File, etc.)
 
   @@map("users")
 }
 model Thread {
-  id           String              @id @default(uuid())
-  type         ThreadType          @default(DIRECT)
-  name         String?             // Optional name for the thread
-  member_count Int                 @default(0) // Member count for the thread
-  unread_count Int                 @default(0) 
-  created_at   DateTime            @default(now())
-  updated_at   DateTime            @updatedAt
-  participants ThreadParticipant[]
-  messages     Message[]
+  id           String     @id @map("_id") @default(auto()) @db.ObjectId
+  type         ThreadType @default(DIRECT)
+  name         String?    // Optional name for the thread
+  member_count Int        @default(0) // Member count for the thread
+  unread_count Int        @default(0)
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+
+  // relational object fields removed; use thread_id fields on related models instead
 
   @@map("threads")
 }
 
 model ThreadParticipant {
-  id        String @id @default(uuid())
-  thread_id String
-  user_id   String
+  id        String @id @map("_id") @default(auto()) @db.ObjectId
+  thread_id String @db.ObjectId
+  user_id   String @db.ObjectId
 
-  thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [user_id], references: [email], onDelete: Cascade)
+  // Removed @relation annotations (SQL-specific). Keep scalar foreign keys for lookups.
 
   @@unique([thread_id, user_id])
   @@map("thread_participants")
@@ -79,22 +76,20 @@ model ThreadParticipant {
 //   @@map("messages")
 // }
 model Message {
-  id                String      @id @default(uuid())
-  thread_id         String
-  author_id         String
+  id                String      @id @map("_id") @default(auto()) @db.ObjectId
+  thread_id         String @db.ObjectId
+  author_id         String @db.ObjectId
   type              MessageType @default(TEXT)
   content           String?
   file_url          String?
-  parent_message_id String?    
+  parent_message_id String? @db.ObjectId
   read_status       Boolean     @default(false)
-  is_edited         Boolean     @default(false) 
+  is_edited         Boolean     @default(false)
   created_at        DateTime    @default(now())
   updated_at        DateTime    @updatedAt
 
-  thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
-  author User   @relation(fields: [author_id], references: [email])
-  parent Message? @relation("MessageToParent",fields: [parent_message_id], references: [id])
-  children Message[] @relation("MessageToParent")
+  // Removed @relation annotations and relational object fields.
+  // Keep scalar fields for lookups and manual population where needed.
 
   @@map("messages")
 }
@@ -111,7 +106,7 @@ enum MessageType {
 
 
 model Records {
-  id                             String        @id @default(uuid())
+  id                             String        @id @map("_id") @default(auto()) @db.ObjectId
   title                          String
   campaign                       String?
   product                        String?
@@ -178,7 +173,7 @@ model Records {
 }
 
 model Campaign {
-  id                   String         @id @default(uuid())
+  id                   String         @id @map("_id") @default(auto()) @db.ObjectId
   name                 String
   slug                 String
   description          String?
@@ -200,17 +195,17 @@ model Campaign {
   product_expense      Int            @default(0)
   partner_expense      Int            @default(0)
   social_platforms     Json?
-  user_id              String
+  user_id              String @db.ObjectId
   created_at           DateTime       @default(now())
   updated_at           DateTime       @updatedAt
 
-  created_by User @relation(fields: [user_id], references: [id])
+  // removed SQL @relation; use user_id to reference the creator
 
   @@map("campaigns")
 }
 
 model File {
-  id         String   @id @default(uuid())
+  id         String   @id @map("_id") @default(auto()) @db.ObjectId
   name       String
   alt_text   String
   type       String
@@ -219,17 +214,17 @@ model File {
   height     Int
   path       String
   bucket_id  String
-  user_id    String
+  user_id    String @db.ObjectId
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  uploaded_by User @relation(fields: [user_id], references: [id])
+  // removed SQL @relation; user_id references the uploader
 
   @@map("files")
 }
 
 model OTP {
-  id         String   @id @default(uuid())
+  id         String   @id @map("_id") @default(auto()) @db.ObjectId
   email      String
   otp        Int      @unique
   expires_at String

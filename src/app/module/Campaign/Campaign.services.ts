@@ -83,26 +83,28 @@ const getCampaigns = async (query: Record<string, any>) => {
         AND: andConditions,
     };
 
-    const result = await prisma.campaign.findMany({
+    // relations were removed for MongoDB schema, so fetch campaigns and their creators separately
+    const campaigns = await prisma.campaign.findMany({
         where: whereConditons,
         skip,
         take: limitNumber,
         orderBy: {
             [sortWith]: sortSequence,
         },
-        include: {
-            created_by: {
-                select: {
-                    first_name: true,
-                    last_name: true,
-                    email: true,
-                    contact_number: true,
-                    profile_pic: true,
-                    role: true
-                }
-            }
-        }
     });
+
+    const userIds = Array.from(new Set(campaigns.map((c) => c.user_id)));
+    const users = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, first_name: true, last_name: true, email: true, contact_number: true, profile_pic: true, role: true },
+    });
+    const userMap: Record<string, any> = {};
+    users.forEach((u) => (userMap[u.id] = u));
+
+    const result = campaigns.map((c) => ({
+        ...c,
+        created_by: userMap[c.user_id] || null,
+    }));
 
     const total = await prisma.campaign.count({ where: whereConditons });
 

@@ -1,6 +1,7 @@
 import path from 'path';
 import prisma from '../../shared/prisma';
-import  supabase  from '../../shared/supabase';
+// GridFS helper replaces Supabase storage usage. See `src/app/shared/gridfs.ts`.
+import gridfs from '../../shared/gridfs';
 import {v4 as uuidv4} from 'uuid';
 import { profile } from 'console';
 
@@ -27,31 +28,34 @@ export const createThread = async (
     }
   }
 
+  // Create thread first, then create participants and optional initial message using scalar fk fields.
   const thread = await prisma.thread.create({
     data: {
       type,
       name,
       member_count: participants.length,
-      participants: {
-        create: participants.map((userId) => ({ user_id: userId })),
-      },
-      ...(initialMessage
-        ? {
-            messages: {
-              create: {
-                author_id: initialMessage.authorId,
-                content: initialMessage.content,
-                type: initialMessage.type,
-              },
-            },
-          }
-        : {}),
-    },
-    include: {
-      participants: true,
-      messages: true,
     },
   });
+
+  // Create participants separately (no nested relations in Mongo schema)
+  if (participants?.length) {
+    await prisma.threadParticipant.createMany({
+      data: participants.map((userId) => ({ thread_id: thread.id, user_id: userId })),
+      skipDuplicates: true,
+    });
+  }
+
+  // Create initial message if present
+  if (initialMessage) {
+    await prisma.message.create({
+      data: {
+        thread_id: thread.id,
+        author_id: initialMessage.authorId,
+        content: initialMessage.content,
+        type: initialMessage.type,
+      },
+    });
+  }
 
   return thread;
 };
@@ -62,9 +66,6 @@ export const updateThreadName = async (threadId: string, name: string) => {
     where: { id: threadId },
     data: { name },
   });
-
-  await supabase.from('threads').update({ name }).eq('id', threadId);
-
   return updatedThread;
 };
 
@@ -77,17 +78,10 @@ export const addMessage = async (threadId: string, authorId: string, content: st
     const fileExt = path.extname(file.originalname);
     const fileName = `${uuidv4()}${fileExt}`;
 
-    const { data, error } = await supabase.storage
-      .from('chat-bucket') 
-      .upload(fileName, file.buffer, {
-        contentType: file.mimetype,
-        upsert: true,
-      });
-
-    if (error) {
-      throw new Error('Error uploading file to Supabase');
-    }
-    fileUrl = supabase.storage.from('chat-bucket').getPublicUrl(fileName).data?.publicUrl;
+    // Upload buffer to GridFS and expose a local streaming route in the app (e.g. /files/:filename)
+    await gridfs.uploadFile(file.buffer, fileName, file.mimetype);
+    // For GridFS we will use a local route to serve files, so build a path that the server can stream.
+    fileUrl = `/files/${fileName}`;
   }
 
   
@@ -194,20 +188,20 @@ export const getThreadMessages = async (
   const messages = await prisma.message.findMany({
     where: { thread_id: threadId },
     orderBy: { created_at: 'asc' },
-    include: {
-      author: {
-        select: {
-         id: true,
-         first_name:true,
-         last_name:true,
-         profile_pic:true,
-         status:true,
-        },
-      },
-    },
   });
 
-  return messages.map((message) => ({
+  // Fetch authors separately because relations were removed in MongoDB schema
+  const authorIds = Array.from(new Set(messages.map((m) => m.author_id)));
+  const authors = await prisma.user.findMany({
+    where: { id: { in: authorIds } },
+    select: { id: true, first_name: true, last_name: true, profile_pic: true, status: true },
+  });
+  const authorMap: Record<string, any> = {};
+  authors.forEach((a) => {
+    authorMap[a.id] = a;
+  });
+
+  return messages.map((message: any) => ({
     id: message.id,
     threadId: message.thread_id,
     content: message.content,
@@ -215,9 +209,9 @@ export const getThreadMessages = async (
     type: message.type,
     author: {
       id: message.author_id,
-      name: message.author?.first_name + ' ' + message.author?.last_name,
-      avatar: message.author.profile_pic || '' ,
-      isActive: message.author.status,
+      name: (authorMap[message.author_id]?.first_name || '') + ' ' + (authorMap[message.author_id]?.last_name || ''),
+      avatar: authorMap[message.author_id]?.profile_pic || '',
+      isActive: authorMap[message.author_id]?.status,
     },
     file_url: message.file_url,
     isEdited: message.is_edited,
@@ -231,39 +225,29 @@ export const getUserThreads = async (
   userId: string,
   onNewThread?: (thread: any) => void
 ) => {
-  const threads = await prisma.thread.findMany({
-    where: {
-      participants: {
-        some: {
-          user_id: userId,
-        },
-      },
-    },
-    include: {
-      participants: {
-        select: {
-          user_id: true,
-          user: {
-            select: {
-              first_name: true,
-              last_name: true,
-              profile_pic: true, 
-            },
-          },
-        },
-      },
-    },
-  });
+  // Find threadParticipant records for this user
+  const participantRecords = await prisma.threadParticipant.findMany({ where: { user_id: userId } });
+  const threadIds = participantRecords.map((p) => p.thread_id);
 
-  // Transform the data to match frontend expectations
+  const threads = await prisma.thread.findMany({ where: { id: { in: threadIds } } });
+
+  // Fetch participants for all threads and user info
+  const allParticipants = await prisma.threadParticipant.findMany({ where: { thread_id: { in: threadIds } } });
+  const userIds = Array.from(new Set(allParticipants.map((p) => p.user_id)));
+  const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, first_name: true, last_name: true, profile_pic: true } });
+  const userMap: Record<string, any> = {};
+  users.forEach((u) => (userMap[u.id] = u));
+
   return threads.map((thread) => ({
     id: thread.id,
     type: thread.type || '',
-    participants: thread.participants.map((participant) => ({
-      id: participant.user_id,
-      name: `${participant.user?.first_name} ${participant.user?.last_name}`,
-      avatar: participant?.user.profile_pic || '',
-    })),
+    participants: allParticipants
+      .filter((p) => p.thread_id === thread.id)
+      .map((participant) => ({
+        id: participant.user_id,
+        name: `${userMap[participant.user_id]?.first_name || ''} ${userMap[participant.user_id]?.last_name || ''}`,
+        avatar: userMap[participant.user_id]?.profile_pic || '',
+      })),
     unreadCount: thread.unread_count || 0,
     name: thread.name || '',
     member_count: thread.member_count || 0,
