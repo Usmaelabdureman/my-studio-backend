@@ -30,6 +30,8 @@ app.use((0, cors_1.default)({
         "https://my-studio-frontend.vercel.app",
         "https://my-studio-backend.vercel.app",
         "http://localhost:3000",
+        "https://www.esmiztech.me",
+        "https://esmiztech.me"
     ],
     credentials: true,
 }));
